@@ -48,4 +48,48 @@ app.post('/login', async (req, res) => {
   res.json({ token });
 });
 
+// Protected Route
+app.get('/profile', async (req, res) => {
+  const token = req.headers.authorization;
+  if (!token) return res.status(401).json({ error: 'Access denied' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    res.json(user);
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 app.listen(5000, () => console.log('Server running on port 5000'));
+
+/// Frontend (React.js) - App.jsx
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function App() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [token, setToken] = useState(null);
+
+  const login = async () => {
+    try {
+      const res = await axios.post('http://localhost:5000/login', { email, password });
+      setToken(res.data.token);
+    } catch (error) {
+      console.error('Login failed');
+    }
+  };
+
+  return (
+    <div>
+      <h1>Login</h1>
+      <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button onClick={login}>Login</button>
+      {token && <p>Token: {token}</p>}
+    </div>
+  );
+}
+
+export default App;
